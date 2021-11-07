@@ -1,0 +1,93 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'com.google.gms.google-services'
+}
+
+android {
+    compileSdk 31
+
+    defaultConfig {
+        applicationId "io.nxtt.demo"
+        minSdk 26
+        targetSdk 31
+        versionCode project.properties.get('versionCode')?.toInteger() ?: 1
+        versionName project.properties.get('versionName') ?: 'DEV'
+
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+
+    signingConfigs {
+        debug {
+            def keyStoreFile = "debug.keystore"
+            storeFile file(keyStoreFile)
+            storePassword "debugPass"
+            keyAlias "debug"
+            keyPassword "debugPass"
+        }
+
+        release {
+            def keypass = ""
+            if (project.hasProperty("keyPassword")) {
+                keypass = project["keyPassword"]
+            }
+
+            def keyStoreFile = "app.keystore"
+            storeFile file(keyStoreFile)
+            storePassword "debugPass" // Will reuse the key for demo purposes
+            keyAlias "releasekey"
+            keyPassword keypass
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            signingConfig signingConfigs.release // Add release configuration here
+            // Proguard stuff can be here
+        }
+
+        debug {
+            signingConfig signingConfigs.debug
+            versionNameSuffix "-debug"
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+        useIR = true
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion compose_version
+    }
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+}
+
+dependencies {
+    implementation "androidx.core:core-ktx:$core_ktx_version"
+    implementation "androidx.appcompat:appcompat:$appcompat_version"
+    implementation "com.google.android.material:material:$material_version"
+    implementation "androidx.compose.ui:ui:$compose_version"
+    implementation "androidx.compose.material:material:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_runtime_ktx_version"
+    implementation "androidx.activity:activity-compose:$activity_compose_version"
+
+    implementation platform('com.google.firebase:firebase-bom:29.0.0')
+
+    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
+}

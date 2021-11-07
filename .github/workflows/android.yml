@@ -1,0 +1,75 @@
+# Android CI
+
+name: android
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    tags:
+    - '*.*.*' # Trigger pattern for this workflow. We will later use this tag to generate `versionName`
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # Build job
+  build:
+    name: "Build apk / appBundle"
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2.4.0
+
+      - name: Configure Envoirnment
+        # Set VERSION_NAME and VERSION_CODE in Jobs env. VERSION_CODE is offsetted by 100
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          echo "VERSION_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+          echo "VERSION_CODE=$(($RUN_NUMBER+100))" >> $GITHUB_ENV
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v2.3.1
+        with:
+          # The Java version to set up. Takes a whole or semver Java version.
+          java-version: 11
+          distribution: 'temurin' # Check action offical repo to see other distributions https://github.com/actions/setup-java
+
+      - name: Setup Android SDK Tools
+        # You may pin to the exact commit or the version.
+        # uses: android-actions/setup-android@72fdd2e74f58fb338a2743720c0847b8becf1589
+        uses: android-actions/setup-android@v2.0.2
+        
+      - name: Get Gadle Dependencies
+        run: ./gradlew androidDependencies
+        
+      - name: Build APK
+        run: ./gradlew assembleDebug -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
+        
+      - name: Store Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          
+  upload-app-distribution:
+    name: "Upload APK to Firebase App Distribution"
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download Stored Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: app-debug
+
+      - name: Upload APK
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.3.2
+        with:
+          # Acquire from Firebase Console. Project Overview -> Project Settigns -> Under the App area you will see `App ID`
+          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          # Generate using Firebase CLI. Command to run `firebase login:ci`.
+          token: ${{ secrets.FIREBASE_TOKEN }}
+          groups: qa-internal # Speciy a group you want the app to be distributed to
+          file: app-debug.apk

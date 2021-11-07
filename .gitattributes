@@ -1,0 +1,5 @@
+# Encrypted files
+app/google-services.json filter=git-crypt diff=git-crypt
+
+# Do not encrypt .gitattributes
+.gitattributes !filter !diff
